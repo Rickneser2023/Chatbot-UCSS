@@ -177,6 +177,21 @@ body {
   gap: 8px;
 }
 
+.menu-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  padding: 4px 6px 4px 0;
+  cursor: pointer;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
 .btn {
   border: none;
   border-radius: 8px;
@@ -324,4 +339,95 @@ body {
 .chat-input button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+@media (max-width: 768px) {
+  .app,
+  .chat-shell {
+    height: 100dvh;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 280px;
+    min-width: 280px;
+    transform: translateX(-110%);
+    transition: transform 0.25s ease;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.25);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .chat-header {
+    padding: 12px 14px;
+    flex-wrap: nowrap;
+  }
+
+  .chat-header-info {
+    min-width: 0;
+  }
+
+  .chat-header p {
+    display: none;
+  }
+
+  .chat-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .chat-header h1 {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .chat-header-actions .btn {
+    padding: 7px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .doc-bar,
+  .notice {
+    padding: 8px 14px;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .chat-body {
+    padding: 14px;
+  }
+
+  .bubble {
+    max-width: 92%;
+  }
+
+  .chat-input {
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .welcome {
+    margin: 24px 0;
+    font-size: 14px;
+  }
 }

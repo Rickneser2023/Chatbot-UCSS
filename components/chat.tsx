@@ -55,6 +55,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [documents, setDocuments] = useState<DocInfo[]>([]);
   const [web, setWeb] = useState<WebInfo | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -164,6 +165,7 @@ export default function Chat() {
     setActiveId(id);
     setInput("");
     setNotice(null);
+    setMenuOpen(false);
   };
 
   const deleteConversation = (id: string) => {
@@ -181,6 +183,7 @@ export default function Chat() {
         newConversation();
       }
     }
+    setMenuOpen(false);
   };
 
   const exportTxt = () => {
@@ -227,7 +230,7 @@ export default function Chat() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <button type="button" className="btn full" onClick={newConversation}>
           + Nueva conversación
         </button>
@@ -241,6 +244,7 @@ export default function Chat() {
                 onClick={() => {
                   setActiveId(c.id);
                   setNotice(null);
+                  setMenuOpen(false);
                 }}
               >
                 <span className="convo-title">{c.title || "Conversación"}</span>
@@ -261,8 +265,18 @@ export default function Chat() {
         </div>
       </aside>
 
+      {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
+
       <main className="chat-shell">
         <header className="chat-header">
+          <button
+            type="button"
+            className="menu-toggle"
+            aria-label="Menú de conversaciones"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            ☰
+          </button>
           <div className="chat-header-info">
             <span className="chat-logo">UCSS</span>
             <div>
