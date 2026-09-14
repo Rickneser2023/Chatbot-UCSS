@@ -5,6 +5,7 @@ import { ensureIndex, PDFS_DIR, resetCache } from "@/lib/index";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MAX_SIZE = 25 * 1024 * 1024;
 

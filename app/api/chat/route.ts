@@ -5,6 +5,7 @@ import { askGroq } from "@/lib/groq";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   let body: { message?: unknown; history?: unknown };

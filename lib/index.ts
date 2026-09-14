@@ -35,17 +35,35 @@ async function rebuild(
   return { documents, chunks, _pdfs: pdfs, _web: { pages: web.pageCount, crawledAt: web.crawledAt } };
 }
 
+function matchesCurrent(
+  index: Index,
+  pdfs: string[],
+  web: { pageCount: number; crawledAt: string }
+): boolean {
+  return (
+    index._pdfs.join("|") === pdfs.join("|") &&
+    index._web.pages === web.pageCount &&
+    index._web.crawledAt === web.crawledAt
+  );
+}
+
+async function loadCachedIndex(): Promise<Index | null> {
+  try {
+    const raw = await fs.readFile(DOCS_JSON, "utf8");
+    return JSON.parse(raw) as Index;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureIndex(): Promise<Index> {
   const pdfs = await listPdfs();
   const web = await buildWebChunks();
-  if (
-    cached &&
-    cached.documents.length === pdfs.length &&
-    cached._pdfs.join("|") === pdfs.join("|") &&
-    cached._web.pages === web.pageCount &&
-    cached._web.crawledAt === web.crawledAt
-  ) {
-    return cached;
+  if (cached && matchesCurrent(cached, pdfs, web)) return cached;
+  const disk = await loadCachedIndex();
+  if (disk && matchesCurrent(disk, pdfs, web)) {
+    cached = disk;
+    return disk;
   }
   const index = await rebuild(pdfs, web);
   try {

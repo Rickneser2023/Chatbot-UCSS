@@ -3,6 +3,7 @@ import { ensureIndex } from "@/lib/index";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET() {
   const index = await ensureIndex();
