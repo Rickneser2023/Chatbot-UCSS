@@ -5,12 +5,28 @@ export interface Chunk {
   textNorm: string;
   page: number;
   heading: string;
+  kind?: "pdf" | "web";
+  url?: string;
+  title?: string;
 }
 
 export interface Index {
   documents: { name: string; pages: number; addedAt: string }[];
   chunks: Chunk[];
   _pdfs: string[];
+  _web: { pages: number; crawledAt: string };
+}
+
+export interface WebPage {
+  url: string;
+  title: string;
+  category: string;
+  paragraphs: string[];
+}
+
+export interface WebPagesFile {
+  crawledAt: string;
+  pages: WebPage[];
 }
 
 export function normalize(s: string): string {

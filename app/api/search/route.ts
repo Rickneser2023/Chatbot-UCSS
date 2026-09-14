@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!q) return NextResponse.json({ hits: [] });
 
   const index = await ensureIndex();
-  const hits = searchFor(q, index.chunks, 5);
+  const hits = searchFor(q, index.chunks, 6);
   return NextResponse.json({
     hits: hits.map((h) => ({
       id: h.chunk.id,
@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
       page: h.chunk.page,
       heading: h.chunk.heading,
       text: h.chunk.text,
+      url: h.chunk.url,
+      kind: h.chunk.kind,
       score: Math.round(h.score * 100) / 100,
     })),
   });

@@ -30,9 +30,16 @@ export async function POST(req: NextRequest) {
     : [];
 
   const index = await ensureIndex();
-  const hits = searchFor(message, index.chunks, 5);
+  const hits = searchFor(message, index.chunks, 6);
   const context = hits
-    .map((h) => `[Documento: ${h.chunk.source}, pág. ${h.chunk.page}] ${h.chunk.text}`)
+    .map((h) => {
+      const c = h.chunk;
+      const origin =
+        c.kind === "web"
+          ? `[Sitio web UCSS: ${c.title ?? c.source} — ${c.url}]`
+          : `[Documento PDF: ${c.source}, pág. ${c.page}]`;
+      return `${origin}\n${c.text}`;
+    })
     .join("\n\n");
 
   const apiKey = process.env.GROQ_API_KEY ?? "";

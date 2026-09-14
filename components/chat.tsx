@@ -19,6 +19,11 @@ interface DocInfo {
   pages: number;
 }
 
+interface WebInfo {
+  pages: number;
+  crawledAt: string;
+}
+
 const STORAGE_KEY = "ucss-chat-conversations-v1";
 
 function newId(): string {
@@ -51,6 +56,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<DocInfo[]>([]);
+  const [web, setWeb] = useState<WebInfo | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -87,6 +93,7 @@ export default function Chat() {
       const res = await fetch("/api/documents");
       const data = await res.json();
       setDocuments(data.documents ?? []);
+      setWeb(data.web ?? null);
       setNotice(null);
     } catch {
       // ignorar
@@ -179,7 +186,7 @@ export default function Chat() {
   const exportTxt = () => {
     if (!convo || messages.length === 0) return;
     const lines = [
-      `Conversación con el Asistente de Admisión UCSS`,
+      `Conversación con el Asistente UCSS`,
       `Fecha: ${new Date(convo.updatedAt).toLocaleString("es-PE")}`,
       `Guardada: ${new Date().toLocaleString("es-PE")}`,
       "",
@@ -259,8 +266,8 @@ export default function Chat() {
           <div className="chat-header-info">
             <span className="chat-logo">UCSS</span>
             <div>
-              <h1>Asistente de Admisión</h1>
-              <p>Universidad Católica Sedes Sapientiae — Responde según la documentación cargada</p>
+              <h1>Asistente UCSS</h1>
+              <p>Universidad Católica Sedes Sapientiae — Carreras, sedes, admisión y servicios</p>
             </div>
           </div>
           <div className="chat-header-actions">
@@ -283,20 +290,31 @@ export default function Chat() {
           </div>
         </header>
 
-        {documents.length > 0 && (
+        {(web && web.pages > 0) || documents.length > 0 ? (
           <div className="doc-bar">
-            Documentos: {documents.map((d) => `${d.name} (${d.pages} pág.)`).join(" · ")}
+            {web && web.pages > 0 && (
+              <span>
+                Web UCSS: {web.pages} secciones informativas
+                {web.crawledAt ? ` (actualizado ${new Date(web.crawledAt).toLocaleDateString("es-PE")})` : ""}
+              </span>
+            )}
+            {documents.map((d) => (
+              <span key={d.name}>
+                {d.name} ({d.pages} pág.)
+              </span>
+            ))}
           </div>
-        )}
+        ) : null}
         {notice && <div className="notice">{notice}</div>}
 
         <section className="chat-body">
           {messages.length === 0 && (
             <div className="welcome">
-              <p>¡Hola! Soy el asistente de admisión de la UCSS.</p>
+              <p>¡Hola! Soy el asistente de la UCSS.</p>
               <p>
-                Pregúntame, por ejemplo: <em>“¿Cuáles son las modalidades de admisión?”</em>,{" "}
-                <em>“¿Cuáles son los requisitos para postular?”</em> o <em>“¿Qué dice sobre los traslados?”</em>.
+                Conozco el sitio oficial de la universidad: puedo hablarte de{" "}
+                <em>“Carreras y sedes”</em>, <em>“Modalidades y requisitos de admisión”</em>,{" "}
+                <em>“Costos de matrícula”</em> y <em>“Becas y servicios”</em>.
               </p>
               <p className="welcome-hint">Tus conversaciones se guardan automáticamente en este navegador.</p>
             </div>

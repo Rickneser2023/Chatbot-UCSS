@@ -1,6 +1,7 @@
 import path from "path";
 import { promises as fs } from "fs";
 import { ingestPdfFile } from "./ingest";
+import { buildWebChunks } from "./web";
 import type { Index } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -15,7 +16,10 @@ async function listPdfs(): Promise<string[]> {
   return files.filter((f) => f.toLowerCase().endsWith(".pdf")).sort();
 }
 
-async function rebuild(pdfs: string[]): Promise<Index> {
+async function rebuild(
+  pdfs: string[],
+  web: { chunks: Index["chunks"]; pageCount: number; crawledAt: string }
+): Promise<Index> {
   const now = new Date().toISOString();
   const documents: Index["documents"] = [];
   const chunks: Index["chunks"] = [];
@@ -23,19 +27,27 @@ async function rebuild(pdfs: string[]): Promise<Index> {
   for (const file of pdfs) {
     const { chunks: fileChunks, pages } = await ingestPdfFile(path.join(PDFS_DIR, file), file);
     documents.push({ name: file, pages, addedAt: now });
-    chunks.push(...fileChunks);
+    chunks.push(...fileChunks.map((c) => ({ ...c, kind: "pdf" as const })));
   }
 
-  return { documents, chunks, _pdfs: pdfs };
+  chunks.push(...web.chunks);
+
+  return { documents, chunks, _pdfs: pdfs, _web: { pages: web.pageCount, crawledAt: web.crawledAt } };
 }
 
 export async function ensureIndex(): Promise<Index> {
   const pdfs = await listPdfs();
-  if (cached && cached.documents.length === pdfs.length) {
-    const cachedNames = cached._pdfs.join("|");
-    if (cachedNames === pdfs.join("|")) return cached;
+  const web = await buildWebChunks();
+  if (
+    cached &&
+    cached.documents.length === pdfs.length &&
+    cached._pdfs.join("|") === pdfs.join("|") &&
+    cached._web.pages === web.pageCount &&
+    cached._web.crawledAt === web.crawledAt
+  ) {
+    return cached;
   }
-  const index = await rebuild(pdfs);
+  const index = await rebuild(pdfs, web);
   try {
     await fs.writeFile(DOCS_JSON, JSON.stringify(index, null, 2));
   } catch { /* el índice en memoria sigue funcionando */ }

@@ -8,9 +8,9 @@
 ![Groq](https://img.shields.io/badge/Groq_API-AI-8B5CF6?logo=stripe)
 ![RAG](https://img.shields.io/badge/RAG-BM25-10B981)
 
-**Chatbot web de asistencia virtual para el proceso de admisión de la Universidad Católica Sedes Sapientiae (UCSS).**
+**Chatbot web de asistencia virtual de la Universidad Católica Sedes Sapientiae (UCSS).**
 
-Responde preguntas de postulantes basándose en la documentación oficial cargada (PDFs de reglamentos de admisión).
+Responde consultas de postulantes, estudiantes y público en general basándose en la información del **sitio web oficial** (`ucss.edu.pe` y `admision.ucss.edu.pe`) y en **documentación oficial cargada** (PDFs de reglamentos de admisión).
 
 </div>
 
@@ -18,7 +18,8 @@ Responde preguntas de postulantes basándose en la documentación oficial cargad
 
 ## ✨ Características
 
-- **Chat conversacional RAG** — Responde preguntas usando solo la información de los documentos cargados
+- **Chat conversacional RAG** — Responde preguntas usando solo la información de los documentos y del sitio web oficial
+- **Base de conocimiento del sitio UCSS** — Rastrea `www.ucss.edu.pe` y `admision.ucss.edu.pe` (carreras, sedes, facultades, admisión, costos y servicios)
 - **Carga de PDFs** — Sube reglamentos y documentos oficiales directamente desde la interfaz
 - **Búsqueda BM25** — Recuperación de información eficiente sin base de datos vectorial
 - **Múltiples conversaciones** — Crea, alterna y elimina conversaciones independientes
@@ -35,6 +36,7 @@ Responde preguntas de postulantes basándose en la documentación oficial cargad
 | Lenguaje | [TypeScript 7](https://www.typescriptlang.org/) (strict mode) |
 | LLM | [Groq API](https://console.groq.com/) — `openai/gpt-oss-120b` |
 | Extracción PDF | [unpdf](https://github.com/nicehash/unpdf) |
+| Rastreo web | [cheerio](https://cheerio.js.org/) — script `npm run crawl` |
 | Búsqueda | BM25 custom con stopwords en español |
 
 ## 🏗️ Arquitectura
@@ -43,13 +45,14 @@ El sistema funciona como un pipeline RAG (Retrieval-Augmented Generation):
 
 ```mermaid
 flowchart LR
-    A[📄 PDFs de reglamento] --> B[Extracción de texto<br/>unpdf]
-    B --> C[División en chunks<br/>~1000 chars]
+    A[🌐 Sitio web UCSS<br/>ucss.edu.pe + admision] --> B[Extracción y<br/>limpieza dí HTML]
+    Q[📄 PDFs de reglamento] --> B
+    B[Normalización<br/>cheerio] --> C[División en chunks<br/>~900-1000 chars]
     C --> D[Índice BM25<br/>data/docs.json]
 
-    E[💬 Pregunta del usuario] --> F[Búsqueda BM25<br/>Top 5 chunks]
+    E[💬 Pregunta del usuario] --> F[Búsqueda BM25<br/>Top 6 chunks]
     D --> F
-    F --> G[Construcción de contexto]
+    F --> G[Construcción de contexto<br/>web con enlace + PDF]
     G --> H[Groq LLM<br/>GPT-OSS-120B]
     H --> I[✅ Respuesta en español]
 
@@ -60,10 +63,11 @@ flowchart LR
 
 ### Flujo detallado
 
-1. **Indexación**: Los PDFs se procesan con `unpdf`, el texto se divide en chunks y se indexa con BM25
-2. **Búsqueda**: Al recibir una pregunta, se recuperan los 5 chunks más relevantes
-3. **Generación**: El contexto se envía a Groq junto con el historial de la conversación
-4. **Respuesta**: El LLM genera una respuesta en español basada únicamente en el contexto
+1. **Rastreo**: `npm run crawl` descarga las páginas listadas en `scripts/ucss-urls.json`, limpia el HTML y guarda los textos en `data/web/pages.json`
+2. **Indexación**: Los PDFs se procesan con `unpdf` y las páginas web se dividen en chunks; todo se indexa con BM25
+3. **Búsqueda**: Al recibir una pregunta, se recuperan los 6 chunks más relevantes (PDF o web)
+4. **Generación**: El contexto se envía a Groq junto con el historial de la conversación
+5. **Respuesta**: El LLM responde en español y cita el enlace oficial cuando usa información de la web
 
 ## 📋 Requisitos previos
 
@@ -114,10 +118,11 @@ El chatbot estará disponible en [http://localhost:3000](http://localhost:3000).
 
 ## 💡 Uso
 
-1. **Subir documentos**: Haz clic en el ícono de documentos en la barra lateral para subir PDFs de reglamentos
-2. **Iniciar conversación**: Escribe tu pregunta sobre admisión en el campo de texto
-3. **Gestionar chats**: Crea nuevas conversaciones con el botón "+" en la barra lateral
-4. **Exportar**: Descarga cualquier conversación como archivo `.txt`
+1. **Actualizar el conocimiento web**: Ejecuta `npm run crawl` para re-rastrear el sitio oficial (carreras, sedes, admisión, costos y servicios)
+2. **Subir documentos**: Haz clic en el ícono de documentos en la barra lateral para subir PDFs de reglamentos
+3. **Iniciar conversación**: Escribe tu pregunta sobre admisión en el campo de texto
+4. **Gestionar chats**: Crea nuevas conversaciones con el botón "+" en la barra lateral
+5. **Exportar**: Descarga cualquier conversación como archivo `.txt`
 
 ## 📁 Estructura del proyecto
 
@@ -126,7 +131,7 @@ chatbot-ucss/
 ├── app/
 │   ├── api/
 │   │   ├── chat/route.ts       # Endpoint principal del chat (RAG)
-│   │   ├── documents/route.ts  # Lista documentos indexados
+│   │   ├── documents/route.ts  # Lista documentos y secciones web indexadas
 │   │   ├── upload/route.ts     # Sube y procesa PDFs
 │   │   └── search/route.ts     # Búsqueda BM25 independiente
 │   ├── layout.tsx              # Layout raíz y metadata
@@ -138,9 +143,13 @@ chatbot-ucss/
 │   ├── groq.ts                 # Cliente Groq y system prompt
 │   ├── index.ts                # Gestión del índice de documentos
 │   ├── ingest.ts               # Extracción y chunking de PDFs
+│   ├── web.ts                  # Carga y chunking de las páginas web
 │   ├── search.ts               # Algoritmo BM25
 │   └── types.ts                # Tipos y utilidades de normalización
-├── data/                       # (gitignored) Índice y PDFs procesados
+├── scripts/
+│   ├── crawl.mjs               # Rastreador del sitio web UCSS
+│   └── ucss-urls.json          # Lista curada de URLs a rastrear
+├── data/                       # (gitignored) Índice, PDFs y webs procesadas
 ├── .env.local.example          # Plantilla de variables de entorno
 ├── next.config.ts              # Configuración de Next.js
 ├── package.json                # Dependencias y scripts
@@ -153,16 +162,17 @@ chatbot-ucss/
 |--------|------|-------------|
 | `POST` | `/api/chat` | Envía un mensaje y obtiene respuesta RAG |
 | `POST` | `/api/upload` | Sube un PDF para indexar (máx. 25 MB) |
-| `GET` | `/api/documents` | Lista los documentos indexados |
+| `GET` | `/api/documents` | Lista documentos PDF y secciones web indexadas |
 | `GET` | `/api/search?q=...` | Busca chunks relevantes (para depuración) |
 
 ## 📦 Scripts disponibles
 
 ```bash
-npm run dev      # Servidor de desarrollo con Turbopack
-npm run build    # Build de producción
-npm run start    # Iniciar servidor de producción
-npm run lint     # Verificar código (próximamente)
+npm run crawl     # Rastrea el sitio web de la UCSS y genera la base de conocimiento
+npm run dev       # Servidor de desarrollo con Turbopack
+npm run build     # Build de producción
+npm run start     # Iniciar servidor de producción
+npm run lint      # Verificar código
 ```
 
 ## 🤝 Contribuir
